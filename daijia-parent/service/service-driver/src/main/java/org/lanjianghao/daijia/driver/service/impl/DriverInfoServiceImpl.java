@@ -4,9 +4,11 @@ import cn.binarywang.wx.miniapp.api.WxMaService;
 import cn.binarywang.wx.miniapp.bean.WxMaJscode2SessionResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import me.chanjar.weixin.common.error.WxErrorException;
+import org.joda.time.DateTime;
 import org.lanjianghao.daijia.common.constant.SystemConstant;
 import org.lanjianghao.daijia.common.execption.BusinessException;
 import org.lanjianghao.daijia.common.result.ResultCodeEnum;
+import org.lanjianghao.daijia.driver.mapper.DriverFaceRecognitionMapper;
 import org.lanjianghao.daijia.driver.mapper.DriverInfoMapper;
 import org.lanjianghao.daijia.driver.mapper.DriverLoginLogMapper;
 import org.lanjianghao.daijia.driver.mapper.DriverSetMapper;
@@ -14,12 +16,9 @@ import org.lanjianghao.daijia.driver.service.CosService;
 import org.lanjianghao.daijia.driver.service.DriverAccountService;
 import org.lanjianghao.daijia.driver.service.DriverInfoService;
 import org.lanjianghao.daijia.driver.service.IaiService;
-import org.lanjianghao.daijia.model.entity.driver.DriverAccount;
-import org.lanjianghao.daijia.model.entity.driver.DriverInfo;
+import org.lanjianghao.daijia.model.entity.driver.*;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import org.lanjianghao.daijia.model.entity.driver.DriverLoginLog;
-import org.lanjianghao.daijia.model.entity.driver.DriverSet;
 import org.lanjianghao.daijia.model.form.driver.DriverFaceModelForm;
 import org.lanjianghao.daijia.model.form.driver.UpdateDriverAuthInfoForm;
 import org.lanjianghao.daijia.model.vo.driver.DriverAuthInfoVo;
@@ -30,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -53,6 +54,9 @@ public class DriverInfoServiceImpl extends ServiceImpl<DriverInfoMapper, DriverI
 
     @Autowired
     private IaiService iaiService;
+
+    @Autowired
+    private DriverFaceRecognitionMapper driverFaceRecognitionMapper;
 
     private DriverInfo newDriver(String openId) {
         //初始化司机基本信息
@@ -108,7 +112,7 @@ public class DriverInfoServiceImpl extends ServiceImpl<DriverInfoMapper, DriverI
 
         DriverLoginVo loginInfo = new DriverLoginVo();
         BeanUtils.copyProperties(driverInfo, loginInfo);
-        loginInfo.setIsArchiveFace(!StringUtils.hasText(driverInfo.getFaceModelId()));
+        loginInfo.setIsArchiveFace(StringUtils.hasText(driverInfo.getFaceModelId()));
 
         return loginInfo;
     }
@@ -149,7 +153,54 @@ public class DriverInfoServiceImpl extends ServiceImpl<DriverInfoMapper, DriverI
         DriverInfo forUpdate = new DriverInfo();
         forUpdate.setId(driverInfo.getId());
         forUpdate.setFaceModelId(modelId);
+        forUpdate.setAuthStatus(1);
         return this.updateById(forUpdate);
     }
 
+    @Override
+    public DriverSet getDriverSet(Long driverId) {
+        return driverSetMapper.selectOne(new LambdaQueryWrapper<DriverSet>().eq(DriverSet::getDriverId, driverId));
+    }
+
+    @Override
+    public List<DriverSet> getBatchDriverSet(List<Long> driverIds) {
+        return driverSetMapper.selectList(new LambdaQueryWrapper<DriverSet>().in(DriverSet::getDriverId, driverIds));
+    }
+
+    @Override
+    public boolean isFaceRecognition(Long driverId) {
+        LambdaQueryWrapper<DriverFaceRecognition> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DriverFaceRecognition::getDriverId, driverId);
+        wrapper.eq(DriverFaceRecognition::getFaceDate, new DateTime().toString("yyyy-MM-dd"));
+        Long count = driverFaceRecognitionMapper.selectCount(wrapper);
+        return count > 0;
+    }
+
+    @Override
+    public boolean verifyDriverFace(DriverFaceModelForm driverFaceModelForm) {
+        Long driverId = driverFaceModelForm.getDriverId();
+        //人脸比对和活体检测
+        boolean res = iaiService.verifyFace(driverFaceModelForm.getImageBase64(), driverId)
+                && iaiService.detectLiveFace(driverFaceModelForm.getImageBase64(), driverId);
+        if (!res) {
+            return false;
+        }
+
+        DriverFaceRecognition toSave = new DriverFaceRecognition();
+        toSave.setFaceDate(new Date());
+        toSave.setDriverId(driverId);
+        driverFaceRecognitionMapper.insert(toSave);
+        return true;
+    }
+
+    @Override
+    public Boolean updateServiceStatus(Long driverId, Integer status) {
+        DriverSet forUpdate = new DriverSet();
+        forUpdate.setDriverId(driverId);
+        forUpdate.setServiceStatus(status);
+        LambdaQueryWrapper<DriverSet> query = new LambdaQueryWrapper<>();
+        query.eq(DriverSet::getDriverId, driverId);
+        int count = driverSetMapper.update(forUpdate, query);
+        return count > 0;
+    }
 }

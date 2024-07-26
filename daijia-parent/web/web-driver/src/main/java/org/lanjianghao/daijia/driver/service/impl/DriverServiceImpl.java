@@ -4,9 +4,11 @@ import org.lanjianghao.daijia.common.constant.RedisConstant;
 import org.lanjianghao.daijia.common.execption.BusinessException;
 import org.lanjianghao.daijia.common.result.Result;
 import org.lanjianghao.daijia.common.result.ResultCodeEnum;
+import org.lanjianghao.daijia.dispatch.client.NewOrderFeignClient;
 import org.lanjianghao.daijia.driver.client.DriverInfoFeignClient;
 import org.lanjianghao.daijia.driver.service.DriverService;
 import lombok.extern.slf4j.Slf4j;
+import org.lanjianghao.daijia.map.client.LocationFeignClient;
 import org.lanjianghao.daijia.model.entity.driver.DriverInfo;
 import org.lanjianghao.daijia.model.form.driver.DriverFaceModelForm;
 import org.lanjianghao.daijia.model.form.driver.UpdateDriverAuthInfoForm;
@@ -29,6 +31,12 @@ public class DriverServiceImpl implements DriverService {
 
     @Autowired
     StringRedisTemplate redisTemplate;
+
+    @Autowired
+    LocationFeignClient locationFeignClient;
+
+    @Autowired
+    private NewOrderFeignClient newOrderFeignClient;
 
     @Override
     public String login(String code) {
@@ -72,5 +80,55 @@ public class DriverServiceImpl implements DriverService {
     @Override
     public Boolean creatDriverFaceModel(DriverFaceModelForm driverFaceModelForm) {
         return client.createDriverFaceModel(driverFaceModelForm).getData();
+    }
+
+    @Override
+    public Boolean isFaceRecognition(Long driverId) {
+        return client.isFaceRecognition(driverId).getData();
+    }
+
+    @Override
+    public Boolean verifyDriverFace(DriverFaceModelForm driverFaceModelForm) {
+        return client.verifyDriverFace(driverFaceModelForm).getData();
+    }
+
+    @Override
+    public Boolean startService(Long driverId) {
+        //判断是否完成认证
+        DriverLoginVo loginInfo = client.getDriverLoginInfo(driverId).getData();
+        if (loginInfo.getAuthStatus() != 2) {
+            throw new BusinessException(ResultCodeEnum.AUTH_ERROR);
+        }
+
+        //判断当天是否完成人脸识别
+        Boolean isFaceRec = client.isFaceRecognition(driverId).getData();
+        if (!isFaceRec) {
+            throw new BusinessException(ResultCodeEnum.FACE_ERROR);
+        }
+
+        //更新订单状态为接单中
+        client.updateServiceStatus(driverId, 1);
+
+        //清除代驾位置信息
+        locationFeignClient.removeDriverLocation(driverId);
+
+        //清空代驾订单队列信息
+        newOrderFeignClient.clearNewOrderQueueData(driverId);
+
+        return true;
+    }
+
+    @Override
+    public Boolean stopService(Long driverId) {
+        //更新订单状态为未结单
+        client.updateServiceStatus(driverId, 0);
+
+        //清除代驾位置信息
+        locationFeignClient.removeDriverLocation(driverId);
+
+        //清空代驾订单队列信息
+        newOrderFeignClient.clearNewOrderQueueData(driverId);
+
+        return true;
     }
 }

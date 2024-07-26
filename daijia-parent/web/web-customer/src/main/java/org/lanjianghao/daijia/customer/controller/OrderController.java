@@ -50,7 +50,7 @@ public class OrderController {
     }
 
     @Operation(summary = "查询订单状态")
-//    @LoginRequired
+    @LoginRequired
     @GetMapping("/getOrderStatus/{orderId}")
     public Result<Integer> getOrderStatus(@PathVariable Long orderId) {
         return Result.ok(orderService.getOrderStatus(orderId));
