@@ -7,7 +7,10 @@ import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.StorageClass;
+import org.lanjianghao.daijia.common.execption.BusinessException;
+import org.lanjianghao.daijia.common.result.ResultCodeEnum;
 import org.lanjianghao.daijia.driver.config.TencentCloudConfigProperties;
+import org.lanjianghao.daijia.driver.service.CiService;
 import org.lanjianghao.daijia.driver.service.CosService;
 import lombok.extern.slf4j.Slf4j;
 import org.lanjianghao.daijia.model.vo.driver.CosUploadVo;
@@ -32,10 +35,16 @@ public class CosServiceImpl implements CosService {
     TencentCloudConfigProperties props;
 
     @Autowired
-    COSClient cosClient;
+    private COSClient cosClient;
 
-    @Override
-    public CosUploadVo upload(MultipartFile file, String path) {
+    @Autowired
+    private CiService ciService;
+
+    private void delete(String uploadPath) {
+        cosClient.deleteObject(props.getBucketPrivate(), uploadPath);
+    }
+
+    private String uploadCos(MultipartFile file, String path) {
         //元数据信息
         ObjectMetadata meta = new ObjectMetadata();
         meta.setContentLength(file.getSize());
@@ -55,8 +64,20 @@ public class CosServiceImpl implements CosService {
         putObjectRequest.setStorageClass(StorageClass.Standard);
         PutObjectResult ret = cosClient.putObject(putObjectRequest);//上传文件
 
-        String url = getImageUrl(uploadPath);
+        return uploadPath;
+    }
 
+    public CosUploadVo upload(MultipartFile file, String path) {
+        String uploadPath = uploadCos(file, path);
+
+        //图片审核
+        Boolean auditingRes = ciService.imageAuditing(uploadPath);
+        if (!auditingRes) {
+            this.delete(uploadPath);
+            throw new BusinessException(ResultCodeEnum.IMAGE_AUDITION_FAIL);
+        }
+
+        String url = getImageUrl(uploadPath);
         //封装返回对象
         CosUploadVo cosUploadVo = new CosUploadVo();
         cosUploadVo.setUrl(uploadPath);

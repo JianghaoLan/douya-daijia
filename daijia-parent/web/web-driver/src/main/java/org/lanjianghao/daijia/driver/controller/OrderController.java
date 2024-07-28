@@ -7,13 +7,15 @@ import org.lanjianghao.daijia.common.login.LoginRequired;
 import org.lanjianghao.daijia.common.result.Result;
 import org.lanjianghao.daijia.common.util.AuthContextHolder;
 import org.lanjianghao.daijia.driver.service.OrderService;
+import org.lanjianghao.daijia.model.form.map.CalculateDrivingLineForm;
+import org.lanjianghao.daijia.model.form.order.StartDriveForm;
+import org.lanjianghao.daijia.model.form.order.UpdateOrderCartForm;
+import org.lanjianghao.daijia.model.vo.map.DrivingLineVo;
 import org.lanjianghao.daijia.model.vo.order.CurrentOrderInfoVo;
 import org.lanjianghao.daijia.model.vo.order.NewOrderDataVo;
+import org.lanjianghao.daijia.model.vo.order.OrderInfoVo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -46,10 +48,58 @@ public class OrderController {
     @LoginRequired
     @GetMapping("/searchDriverCurrentOrder")
     public Result<CurrentOrderInfoVo> searchDriverCurrentOrder() {
-        CurrentOrderInfoVo currentOrderInfoVo = new CurrentOrderInfoVo();
-        //TODO 目前假设司机没有正进行的订单，后续完善接口
-        currentOrderInfoVo.setIsHasCurrentOrder(false);
+        Long driverId = AuthContextHolder.getUserId();
+        CurrentOrderInfoVo currentOrderInfoVo = orderService.searchDriverCurrentOrder(driverId);
         return Result.ok(currentOrderInfoVo);
+    }
+
+    @Operation(summary = "司机抢单")
+    @LoginRequired
+    @GetMapping("/robNewOrder/{orderId}")
+    public Result<Boolean> robNewOrder(@PathVariable Long orderId) {
+        Long driverId = AuthContextHolder.getUserId();
+        return Result.ok(orderService.robNewOrder(driverId, orderId));
+    }
+
+    @Operation(summary = "获取订单信息")
+    @LoginRequired
+    @GetMapping("/getOrderInfo/{orderId}")
+    public Result<OrderInfoVo> getOrderInfo(@PathVariable Long orderId) {
+        Long driverId = AuthContextHolder.getUserId();
+        return Result.ok(orderService.getOrderInfo(orderId, driverId));
+    }
+
+    @Operation(summary = "计算最佳驾驶线路")
+    @LoginRequired
+    @PostMapping("/calculateDrivingLine")
+    public Result<DrivingLineVo> calculateDrivingLine(@RequestBody CalculateDrivingLineForm calculateDrivingLineForm) {
+        return Result.ok(orderService.calculateDrivingLine(calculateDrivingLineForm));
+    }
+
+    @Operation(summary = "司机到达代驾起始地点")
+    @LoginRequired
+    @GetMapping("/driverArriveStartLocation/{orderId}")
+    public Result<Boolean> driverArriveStartLocation(@PathVariable Long orderId) {
+        Long driverId = AuthContextHolder.getUserId();
+        return Result.ok(orderService.driverArriveStartLocation(orderId, driverId));
+    }
+
+    @Operation(summary = "更新代驾车辆信息")
+    @LoginRequired
+    @PostMapping("/updateOrderCart")
+    public Result<Boolean> updateOrderCart(@RequestBody UpdateOrderCartForm updateOrderCartForm) {
+        Long driverId = AuthContextHolder.getUserId();
+        updateOrderCartForm.setDriverId(driverId);
+        return Result.ok(orderService.updateOrderCart(updateOrderCartForm));
+    }
+
+    @Operation(summary = "开始代驾服务")
+    @LoginRequired
+    @PostMapping("/startDrive")
+    public Result<Boolean> startDrive(@RequestBody StartDriveForm startDriveForm) {
+        Long driverId = AuthContextHolder.getUserId();
+        startDriveForm.setDriverId(driverId);
+        return Result.ok(orderService.startDrive(startDriveForm));
     }
 }
 

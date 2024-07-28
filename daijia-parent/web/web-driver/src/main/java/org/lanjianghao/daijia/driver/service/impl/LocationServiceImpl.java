@@ -10,9 +10,13 @@ import org.lanjianghao.daijia.map.client.LocationFeignClient;
 import org.lanjianghao.daijia.map.client.MapFeignClient;
 import org.lanjianghao.daijia.model.entity.driver.DriverInfo;
 import org.lanjianghao.daijia.model.entity.driver.DriverSet;
+import org.lanjianghao.daijia.model.form.map.OrderServiceLocationForm;
 import org.lanjianghao.daijia.model.form.map.UpdateDriverLocationForm;
+import org.lanjianghao.daijia.model.form.map.UpdateOrderLocationForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -36,5 +40,15 @@ public class LocationServiceImpl implements LocationService {
             return locationFeignClient.updateDriverLocation(updateDriverLocationForm).getData();
         }
         throw new BusinessException(ResultCodeEnum.NO_START_SERVICE);
+    }
+
+    @Override
+    public Boolean updateOrderLocationToCache(UpdateOrderLocationForm updateOrderLocationForm) {
+        return locationFeignClient.updateOrderLocationToCache(updateOrderLocationForm).getData();
+    }
+
+    @Override
+    public Boolean saveOrderServiceLocation(List<OrderServiceLocationForm> orderLocationServiceFormList) {
+        return locationFeignClient.saveOrderServiceLocation(orderLocationServiceFormList).getData();
     }
 }

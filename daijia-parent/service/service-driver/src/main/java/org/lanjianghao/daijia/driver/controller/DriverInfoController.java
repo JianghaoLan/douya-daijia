@@ -9,6 +9,7 @@ import org.lanjianghao.daijia.model.entity.driver.DriverSet;
 import org.lanjianghao.daijia.model.form.driver.DriverFaceModelForm;
 import org.lanjianghao.daijia.model.form.driver.UpdateDriverAuthInfoForm;
 import org.lanjianghao.daijia.model.vo.driver.DriverAuthInfoVo;
+import org.lanjianghao.daijia.model.vo.driver.DriverInfoVo;
 import org.lanjianghao.daijia.model.vo.driver.DriverLoginVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +37,12 @@ public class DriverInfoController {
     public Result<DriverLoginVo> getDriverLoginInfo(@PathVariable("driverId") Long driverId) {
         DriverLoginVo driverLoginVo = driverInfoService.getDriverLoginInfo(driverId);
         return Result.ok(driverLoginVo);
+    }
+
+    @Operation(summary = "获取司机基本信息")
+    @GetMapping("/getDriverInfo/{driverId}")
+    public Result<DriverInfoVo> getDriverInfo(@PathVariable Long driverId) {
+        return Result.ok(driverInfoService.getDriverInfo(driverId));
     }
 
     @Operation(summary = "获取司机的认证信息")

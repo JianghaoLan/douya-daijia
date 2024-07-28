@@ -20,7 +20,7 @@ public class CosServiceImpl implements CosService {
     private CosFeignClient cosFeignClient;
 
     @Override
-    public CosUploadVo updateFile(MultipartFile file, String path) {
+    public CosUploadVo uploadFile(MultipartFile file, String path) {
         Result<CosUploadVo> res = cosFeignClient.upload(file, path);
         if (res.getCode() != 200) {
             throw new BusinessException(ResultCodeEnum.DATA_ERROR);

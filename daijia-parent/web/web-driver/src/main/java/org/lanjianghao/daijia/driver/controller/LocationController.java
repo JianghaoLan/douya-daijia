@@ -7,12 +7,16 @@ import org.lanjianghao.daijia.common.login.LoginRequired;
 import org.lanjianghao.daijia.common.result.Result;
 import org.lanjianghao.daijia.common.util.AuthContextHolder;
 import org.lanjianghao.daijia.driver.service.LocationService;
+import org.lanjianghao.daijia.model.form.map.OrderServiceLocationForm;
 import org.lanjianghao.daijia.model.form.map.UpdateDriverLocationForm;
+import org.lanjianghao.daijia.model.form.map.UpdateOrderLocationForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Slf4j
 @Tag(name = "位置API接口管理")
@@ -31,6 +35,20 @@ public class LocationController {
         Long driverId = AuthContextHolder.getUserId();
         updateDriverLocationForm.setDriverId(driverId);
         return Result.ok(locationService.updateDriverLocation(updateDriverLocationForm));
+    }
+
+    @Operation(summary = "司机赶往代驾起始点：更新订单位置到Redis缓存")
+    @LoginRequired
+    @PostMapping("/updateOrderLocationToCache")
+    public Result updateOrderLocationToCache(@RequestBody UpdateOrderLocationForm updateOrderLocationForm) {
+        return Result.ok(locationService.updateOrderLocationToCache(updateOrderLocationForm));
+    }
+
+    @Operation(summary = "开始代驾服务：保存代驾服务订单位置")
+    @LoginRequired
+    @PostMapping("/saveOrderServiceLocation")
+    public Result<Boolean> saveOrderServiceLocation(@RequestBody List<OrderServiceLocationForm> orderLocationServiceFormList) {
+        return Result.ok(locationService.saveOrderServiceLocation(orderLocationServiceFormList));
     }
 }
 

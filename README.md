@@ -88,3 +88,12 @@ docker run \
 minio/minio server /data --console-address ":9001"
 ```
 
+### Mongo DB
+
+```shell
+docker run -d --restart=always \
+-p 27017:27017 \
+-v /path/to/mongo/db:/data/db \
+--name mongo mongo:7.0.0
+```
+

@@ -5,6 +5,7 @@ import org.lanjianghao.daijia.model.entity.driver.DriverSet;
 import org.lanjianghao.daijia.model.form.driver.DriverFaceModelForm;
 import org.lanjianghao.daijia.model.form.driver.UpdateDriverAuthInfoForm;
 import org.lanjianghao.daijia.model.vo.driver.DriverAuthInfoVo;
+import org.lanjianghao.daijia.model.vo.driver.DriverInfoVo;
 import org.lanjianghao.daijia.model.vo.driver.DriverLoginVo;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,9 @@ public interface DriverInfoFeignClient {
 
     @GetMapping("/driver/info/getDriverLoginInfo/{driverId}")
     Result<DriverLoginVo> getDriverLoginInfo(@PathVariable("driverId") Long driverId);
+
+    @GetMapping("/driver/info/getDriverInfo/{driverId}")
+    Result<DriverInfoVo> getDriverInfo(@PathVariable Long driverId);
 
     @GetMapping("/driver/info/getDriverAuthInfo/{driver}")
     Result<DriverAuthInfoVo> getDriverAuthInfo(@PathVariable Long driver);

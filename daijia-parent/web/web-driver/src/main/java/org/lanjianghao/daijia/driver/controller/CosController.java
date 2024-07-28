@@ -24,7 +24,7 @@ public class CosController {
 //    @LoginRequired
     @PostMapping("/upload")
     public Result<CosUploadVo> upload(@RequestPart("file") MultipartFile file, @RequestParam(name = "path", defaultValue = "auth") String path) {
-        CosUploadVo res = cosService.updateFile(file, path);
+        CosUploadVo res = cosService.uploadFile(file, path);
         return Result.ok(res);
     }
 

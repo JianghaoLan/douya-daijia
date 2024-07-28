@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lanjianghao.daijia.model.form.driver.DriverFaceModelForm;
 import org.lanjianghao.daijia.model.form.driver.UpdateDriverAuthInfoForm;
 import org.lanjianghao.daijia.model.vo.driver.DriverAuthInfoVo;
+import org.lanjianghao.daijia.model.vo.driver.DriverInfoVo;
 import org.lanjianghao.daijia.model.vo.driver.DriverLoginVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -202,5 +204,20 @@ public class DriverInfoServiceImpl extends ServiceImpl<DriverInfoMapper, DriverI
         query.eq(DriverSet::getDriverId, driverId);
         int count = driverSetMapper.update(forUpdate, query);
         return count > 0;
+    }
+
+    @Override
+    public DriverInfoVo getDriverInfo(Long driverId) {
+        DriverInfo driverInfo = this.getById(driverId);
+
+        DriverInfoVo vo = new DriverInfoVo();
+        BeanUtils.copyProperties(driverInfo, vo);
+
+        //计算驾龄
+        int curYear = new DateTime().getYear();
+        int licenseYear = new DateTime(driverInfo.getDriverLicenseIssueDate()).getYear();
+        vo.setDriverLicenseAge(curYear - licenseYear);
+
+        return vo;
     }
 }
