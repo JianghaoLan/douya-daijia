@@ -12,6 +12,7 @@ import org.lanjianghao.daijia.model.vo.rules.FeeRuleResponse;
 import org.lanjianghao.daijia.model.vo.rules.FeeRuleResponseVo;
 import org.lanjianghao.daijia.rules.service.FeeRuleService;
 import lombok.extern.slf4j.Slf4j;
+import org.lanjianghao.daijia.rules.utils.DroolsHelper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,9 @@ public class FeeRuleServiceImpl implements FeeRuleService {
     @Autowired
     private KieContainer kieContainer;
 
+    @Autowired
+    private DroolsHelper droolsHelper;
+
     @Override
     public FeeRuleResponseVo calculateOrderFee(FeeRuleRequestForm calculateOrderFeeForm) {
         FeeRuleRequest feeRuleRequest = new FeeRuleRequest();
@@ -35,15 +39,8 @@ public class FeeRuleServiceImpl implements FeeRuleService {
         feeRuleRequest.setWaitMinute(calculateOrderFeeForm.getWaitMinute());
         BeanUtils.copyProperties(calculateOrderFeeForm, feeRuleRequest);
 
-        FeeRuleResponse feeRuleResponse = new FeeRuleResponse();
-
-        List<Command<?>> cmds = new ArrayList<>();
-        cmds.add(CommandFactory.newSetGlobal("feeRuleResponse", feeRuleResponse));
-        cmds.add(CommandFactory.newInsert(feeRuleRequest, "feeRuleRequest"));
-        // 开启会话
-        StatelessKieSession kieSession = kieContainer.newStatelessKieSession();
-        // Execute the list.
-        kieSession.execute(CommandFactory.newBatchExecution(cmds));
+        //调用drools计算
+        FeeRuleResponse feeRuleResponse = droolsHelper.calculateOrderFee(feeRuleRequest);
 
         FeeRuleResponseVo res = new FeeRuleResponseVo();
         BeanUtils.copyProperties(feeRuleResponse, res);

@@ -1,11 +1,11 @@
 //package对应的不一定是真正的目录，可以任意写com.abc，同一个包下的drl文件可以相互访问
-package  com.atguigu.daijia
+package  org.lanjianghao.daijia.profitsharing
 
-import rules.form.model.org.lanjianghao.daijia.ProfitsharingRuleRequest;
+import org.lanjianghao.daijia.model.form.rules.ProfitsharingRuleRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-global rules.vo.model.org.lanjianghao.daijia.ProfitsharingRuleResponse profitsharingRuleResponse;
+global org.lanjianghao.daijia.model.vo.rules.ProfitsharingRuleResponse profitsharingRuleResponse;
 //支付微信平台费率：0.6%
 //global BigDecimal paymentRate = new BigDecimal(0.006);
 /**

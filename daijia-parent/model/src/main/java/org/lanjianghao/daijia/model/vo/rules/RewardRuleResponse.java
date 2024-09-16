@@ -10,6 +10,6 @@ public class RewardRuleResponse {
 
 
     @Schema(description = "奖励金额")
-    private BigDecimal rewardAmount;
+    private BigDecimal rewardAmount = BigDecimal.ZERO;
 
 }

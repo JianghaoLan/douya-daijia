@@ -1,6 +1,7 @@
 package org.lanjianghao.daijia.customer.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.lanjianghao.daijia.common.login.LoginRequired;
@@ -10,6 +11,8 @@ import org.lanjianghao.daijia.customer.service.OrderService;
 import org.lanjianghao.daijia.model.form.customer.ExpectOrderForm;
 import org.lanjianghao.daijia.model.form.customer.SubmitOrderForm;
 import org.lanjianghao.daijia.model.form.map.CalculateDrivingLineForm;
+import org.lanjianghao.daijia.model.form.payment.CreateWxPaymentForm;
+import org.lanjianghao.daijia.model.vo.base.PageVo;
 import org.lanjianghao.daijia.model.vo.customer.ExpectOrderVo;
 import org.lanjianghao.daijia.model.vo.driver.DriverInfoVo;
 import org.lanjianghao.daijia.model.vo.map.DrivingLineVo;
@@ -17,6 +20,8 @@ import org.lanjianghao.daijia.model.vo.map.OrderLocationVo;
 import org.lanjianghao.daijia.model.vo.map.OrderServiceLastLocationVo;
 import org.lanjianghao.daijia.model.vo.order.CurrentOrderInfoVo;
 import org.lanjianghao.daijia.model.vo.order.OrderInfoVo;
+import org.lanjianghao.daijia.model.vo.order.OrderListVo;
+import org.lanjianghao.daijia.model.vo.payment.WxPrepayVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -99,6 +104,37 @@ public class OrderController {
     @GetMapping("/getOrderServiceLastLocation/{orderId}")
     public Result<OrderServiceLastLocationVo> getOrderServiceLastLocation(@PathVariable Long orderId) {
         return Result.ok(orderService.getOrderServiceLastLocation(orderId));
+    }
+
+
+    @Operation(summary = "获取乘客订单分页列表")
+    @LoginRequired
+    @GetMapping("findCustomerOrderPage/{page}/{limit}")
+    public Result<PageVo<OrderListVo>> findCustomerOrderPage(
+            @Parameter(name = "page", description = "当前页码", required = true)
+            @PathVariable Long page,
+
+            @Parameter(name = "limit", description = "每页记录数", required = true)
+            @PathVariable Long limit) {
+        Long customerId = AuthContextHolder.getUserId();
+        PageVo<OrderListVo> pageVo = orderService.findCustomerOrderPage(customerId, page, limit);
+        return Result.ok(pageVo);
+    }
+
+    @Operation(summary = "创建微信支付")
+    @LoginRequired
+    @PostMapping("/createWxPayment")
+    public Result<WxPrepayVo> createWxPayment(@RequestBody CreateWxPaymentForm createWxPaymentForm) {
+        Long customerId = AuthContextHolder.getUserId();
+        createWxPaymentForm.setCustomerId(customerId);
+        return Result.ok(orderService.createWxPayment(createWxPaymentForm));
+    }
+
+    @Operation(summary = "支付状态查询")
+    @LoginRequired
+    @GetMapping("/queryPayStatus/{orderNo}")
+    public Result<Boolean> queryPayStatus(@PathVariable String orderNo) {
+        return Result.ok(orderService.queryPayStatus(orderNo));
     }
 }
 

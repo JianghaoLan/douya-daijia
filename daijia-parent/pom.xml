@@ -189,6 +189,11 @@
                 <artifactId>drools-commands</artifactId>
                 <version>${drools.version}</version>
             </dependency>
+            <dependency> <!-- when not using Rule Unit and using `kmodule.xml` for defining a rule base -->
+                <groupId>org.drools</groupId>
+                <artifactId>drools-xml-support</artifactId>
+                <version>${drools.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

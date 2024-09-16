@@ -97,4 +97,9 @@ public class CustomerInfoServiceImpl extends ServiceImpl<CustomerInfoMapper, Cus
         return this.updateById(forUpdate);
     }
 
+    @Override
+    public String getCustomerOpenId(Long customerId) {
+        return this.getById(customerId).getWxOpenId();
+    }
+
 }

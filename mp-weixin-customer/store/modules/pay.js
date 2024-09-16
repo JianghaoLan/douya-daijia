@@ -72,8 +72,9 @@ const usePayStore = common_vendor.defineStore("app-pay", {
         };
         console.log("wxPayParams", wxPayParams);
         try {
-          console.log("微信官方支付接口---start");
-          common_vendor.wx$1.requestPayment(wxPayParams);
+          // 测试，不执行实际支付逻辑
+          // console.log("微信官方支付接口---start");
+          // common_vendor.wx$1.requestPayment(wxPayParams);
         } catch (err) {
           console.log("err", err);
         }

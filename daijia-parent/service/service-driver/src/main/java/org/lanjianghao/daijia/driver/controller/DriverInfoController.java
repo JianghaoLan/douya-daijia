@@ -95,5 +95,11 @@ public class DriverInfoController {
     public Result<Boolean> updateServiceStatus(@PathVariable Long driverId, @PathVariable Integer status) {
         return Result.ok(driverInfoService.updateServiceStatus(driverId, status));
     }
+
+    @Operation(summary = "获取司机OpenId")
+    @GetMapping("/getDriverOpenId/{driverId}")
+    public Result<String> getDriverOpenId(@PathVariable Long driverId) {
+        return Result.ok(driverInfoService.getDriverOpenId(driverId));
+    }
 }
 

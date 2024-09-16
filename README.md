@@ -97,3 +97,16 @@ docker run -d --restart=always \
 --name mongo mongo:7.0.0
 ```
 
+### Seata
+
+下载二进制包本地搭建。非localhost搭建会出现连不上的问题
+
+附：docker启动方法
+
+```shell
+docker run --name seata-server \
+--restart=always \
+-p 8091:8091 -p 7091:7091 \
+-d seataio/seata-server:1.7.1
+```
+

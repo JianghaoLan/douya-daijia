@@ -43,4 +43,6 @@ public class CustomerController {
 //        Boolean res = customerInfoService.updateWxPhone(updateWxPhoneForm);
         return Result.ok(true);
     }
+
+
 }

@@ -1,10 +1,22 @@
 package org.lanjianghao.daijia.map.client;
 
+import org.lanjianghao.daijia.common.result.Result;
+import org.lanjianghao.daijia.model.form.payment.PaymentInfoForm;
+import org.lanjianghao.daijia.model.vo.payment.WxPrepayVo;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 
 @FeignClient(value = "service-payment")
 public interface WxPayFeignClient {
 
+    @PostMapping("payment/wxPay/createJsapi")
+    Result<WxPrepayVo> createWxPayment(@RequestBody PaymentInfoForm paymentInfoForm);
+
+    @GetMapping("payment/wxPay/queryPayStatus/{orderNo}")
+    Result<Boolean> queryPayStatus(@PathVariable String orderNo);
 
 }

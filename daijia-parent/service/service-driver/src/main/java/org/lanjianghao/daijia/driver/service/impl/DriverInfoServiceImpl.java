@@ -220,4 +220,9 @@ public class DriverInfoServiceImpl extends ServiceImpl<DriverInfoMapper, DriverI
 
         return vo;
     }
+
+    @Override
+    public String getDriverOpenId(Long driverId) {
+        return this.getById(driverId).getWxOpenId();
+    }
 }

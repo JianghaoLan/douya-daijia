@@ -31,7 +31,6 @@ public interface LocationFeignClient {
     @GetMapping("/map/location/getCacheOrderLocation/{orderId}")
     Result<OrderLocationVo> getCacheOrderLocation(@PathVariable Long orderId);
 
-
     @PostMapping("/map/location/saveOrderServiceLocation")
     Result<Boolean> saveOrderServiceLocation(@RequestBody List<OrderServiceLocationForm> orderLocationServiceFormList);
 

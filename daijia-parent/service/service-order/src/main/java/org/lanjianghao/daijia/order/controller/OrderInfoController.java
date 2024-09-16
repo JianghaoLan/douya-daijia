@@ -1,16 +1,23 @@
 package org.lanjianghao.daijia.order.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.lanjianghao.daijia.common.result.Result;
 import org.lanjianghao.daijia.model.entity.order.OrderInfo;
 import org.lanjianghao.daijia.model.form.order.OrderInfoForm;
 import org.lanjianghao.daijia.model.form.order.StartDriveForm;
+import org.lanjianghao.daijia.model.form.order.UpdateOrderBillForm;
 import org.lanjianghao.daijia.model.form.order.UpdateOrderCartForm;
-import org.lanjianghao.daijia.model.vo.order.CurrentOrderInfoVo;
+import org.lanjianghao.daijia.model.vo.base.PageVo;
+import org.lanjianghao.daijia.model.vo.order.*;
 import org.lanjianghao.daijia.order.service.OrderInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 
 @Tag(name = "订单API接口管理")
@@ -74,6 +81,100 @@ public class OrderInfoController {
     @PostMapping("/startDrive")
     public Result<Boolean> startDrive(@RequestBody StartDriveForm startDriveForm) {
         return Result.ok(orderInfoService.startDrive(startDriveForm));
+    }
+
+    @Operation(summary = "根据时间段获取订单数")
+    @GetMapping("/getOrderNumByTime/{startTime}/{endTime}")
+    public Result<Long> getOrderNumByTime(@PathVariable String startTime, @PathVariable String endTime) {
+        return Result.ok(orderInfoService.getOrderNumByTime(startTime, endTime));
+    }
+
+    @Operation(summary = "结束代驾服务更新订单账单")
+    @PostMapping("/endDrive")
+    public Result<Boolean> endDrive(@RequestBody UpdateOrderBillForm updateOrderBillForm) {
+        return Result.ok(orderInfoService.endDrive(updateOrderBillForm));
+    }
+
+    @Operation(summary = "获取乘客订单分页列表")
+    @GetMapping("/findCustomerOrderPage/{customerId}/{page}/{limit}")
+    public Result<PageVo> findCustomerOrderPage(
+            @Parameter(name = "customerId", description = "乘客id", required = true)
+            @PathVariable Long customerId,
+
+            @Parameter(name = "page", description = "当前页码", required = true)
+            @PathVariable Long page,
+
+            @Parameter(name = "limit", description = "每页记录数", required = true)
+            @PathVariable Long limit) {
+        Page<OrderListVo> pageParam = new Page<>(page, limit);
+        IPage<OrderListVo> pageModel = orderInfoService.pageCustomerOrderByCustomerId(customerId, pageParam);
+
+        PageVo<OrderListVo> pageVo = new PageVo<>(pageModel.getRecords(), pageModel.getPages(), pageModel.getTotal());
+        pageVo.setPage(page);
+        pageVo.setLimit(limit);
+        return Result.ok(pageVo);
+    }
+
+    @Operation(summary = "获取司机订单分页列表")
+    @GetMapping("/findDriverOrderPage/{driverId}/{page}/{limit}")
+    public Result<PageVo> findDriverOrderPage(
+            @Parameter(name = "driverId", description = "司机id", required = true)
+            @PathVariable Long driverId,
+
+            @Parameter(name = "page", description = "当前页码", required = true)
+            @PathVariable Long page,
+
+            @Parameter(name = "limit", description = "每页记录数", required = true)
+            @PathVariable Long limit) {
+        Page<OrderListVo> pageParam = new Page<>(page, limit);
+        IPage<OrderListVo> pageModel = orderInfoService.pageDriverOrderByDriverId(driverId, pageParam);
+
+        PageVo<OrderListVo> pageVo = new PageVo<>(pageModel.getRecords(), pageModel.getPages(), pageModel.getTotal());
+        pageVo.setPage(page);
+        pageVo.setLimit(limit);
+        return Result.ok(pageVo);
+    }
+
+    @Operation(summary = "根据订单id获取实际账单信息")
+    @GetMapping("/getOrderBillInfo/{orderId}")
+    public Result<OrderBillVo> getOrderBillInfo(@PathVariable Long orderId) {
+        return Result.ok(orderInfoService.getOrderBillInfo(orderId));
+    }
+
+    @Operation(summary = "根据订单id获取实际分账信息")
+    @GetMapping("/getOrderProfitsharing/{orderId}")
+    public Result<OrderProfitsharingVo> getOrderProfitsharing(@PathVariable Long orderId) {
+        return Result.ok(orderInfoService.getOrderProfitsharing(orderId));
+    }
+
+    @Operation(summary = "发送账单信息")
+    @GetMapping("/sendOrderBillInfo/{orderId}/{driverId}")
+    public Result<Boolean> sendOrderBillInfo(@PathVariable Long orderId, @PathVariable Long driverId) {
+        return Result.ok(orderInfoService.sendOrderBillInfo(orderId, driverId));
+    }
+
+    @Operation(summary = "获取订单支付信息")
+    @GetMapping("/getOrderPayVo/{orderNo}/{customerId}")
+    public Result<OrderPayVo> getOrderPayVo(@PathVariable String orderNo, @PathVariable Long customerId) {
+        return Result.ok(orderInfoService.getOrderPayVo(orderNo, customerId));
+    }
+
+    @Operation(summary = "更改订单支付状态")
+    @GetMapping("/updateOrderPayStatus/{orderNo}")
+    public Result<Boolean> updateOrderPayStatus(@PathVariable String orderNo) {
+        return Result.ok(orderInfoService.updateOrderPayStatus(orderNo));
+    }
+
+    @Operation(summary = "获取订单的系统奖励")
+    @GetMapping("/getOrderRewardFee/{orderNo}")
+    public Result<OrderRewardVo> getOrderRewardFee(@PathVariable String orderNo) {
+        return Result.ok(orderInfoService.getOrderRewardFee(orderNo));
+    }
+
+    @Operation(summary = "更新订单优惠券金额")
+    @GetMapping("/updateCouponAmount/{orderId}/{couponAmount}")
+    public Result<Boolean> updateCouponAmount(@PathVariable Long orderId, @PathVariable BigDecimal couponAmount) {
+        return Result.ok(orderInfoService.updateCouponAmount(orderId, couponAmount));
     }
 }
 
