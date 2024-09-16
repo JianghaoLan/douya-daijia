@@ -40,4 +40,6 @@ public interface OrderService {
     WxPrepayVo createWxPayment(CreateWxPaymentForm createWxPaymentForm);
 
     Boolean queryPayStatus(String orderNo);
+
+    Boolean cancelOrder(Long orderId, Long customerId);
 }

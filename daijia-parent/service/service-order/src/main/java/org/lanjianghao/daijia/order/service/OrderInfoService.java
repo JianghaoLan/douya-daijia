@@ -11,6 +11,7 @@ import org.lanjianghao.daijia.model.form.order.UpdateOrderCartForm;
 import org.lanjianghao.daijia.model.vo.order.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface OrderInfoService extends IService<OrderInfo> {
 
@@ -52,5 +53,9 @@ public interface OrderInfoService extends IService<OrderInfo> {
 
     void cancelOrder(long parseLong);
 
+    void cancelOrder(Long orderId, Long customerId);
+
     Boolean updateCouponAmount(Long orderId, BigDecimal couponAmount);
+
+    List<OrderInfo> getPendingOrderInfos(List<Long> orderIds);
 }

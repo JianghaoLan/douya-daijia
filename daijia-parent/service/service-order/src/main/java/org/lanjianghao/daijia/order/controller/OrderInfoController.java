@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 
 @Tag(name = "订单API接口管理")
@@ -33,6 +34,18 @@ public class OrderInfoController {
     @PostMapping("/saveOrderInfo")
     public Result<Long> saveOrderInfo(@RequestBody OrderInfoForm orderInfoForm) {
         return Result.ok(orderInfoService.saveOrderInfo(orderInfoForm));
+    }
+
+    @Operation(summary = "顾客取消订单")
+    @GetMapping("/cancelOrder/{orderId}/{customerId}")
+    Result<Boolean> cancelOrder(@PathVariable Long orderId, @PathVariable Long customerId) {
+        orderInfoService.cancelOrder(orderId, customerId);
+        return Result.ok(true);
+    }
+
+    @PostMapping("/getPendingOrderInfos")
+    Result<List<OrderInfo>> getPendingOrderInfos(@RequestBody List<Long> orderIds) {
+        return Result.ok(orderInfoService.getPendingOrderInfos(orderIds));
     }
 
     @Operation(summary = "根据订单id获取订单状态")

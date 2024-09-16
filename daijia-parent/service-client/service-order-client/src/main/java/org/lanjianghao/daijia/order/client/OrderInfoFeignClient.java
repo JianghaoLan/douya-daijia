@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 
 @FeignClient(value = "service-order")
@@ -22,6 +23,9 @@ public interface OrderInfoFeignClient {
 
     @PostMapping("/order/info/saveOrderInfo")
     Result<Long> saveOrderInfo(@RequestBody OrderInfoForm orderInfoForm);
+
+    @GetMapping("/order/info/cancelOrder/{orderId}/{customerId}")
+    Result<Boolean> cancelOrder(@PathVariable Long orderId, @PathVariable Long customerId);
 
     @GetMapping("/order/info/getOrderStatus/{orderId}")
     Result<Integer> getOrderStatus(@PathVariable Long orderId);
@@ -83,4 +87,8 @@ public interface OrderInfoFeignClient {
 
     @GetMapping("/order/info/updateCouponAmount/{orderId}/{couponAmount}")
     Result<Boolean> updateCouponAmount(@PathVariable Long orderId, @PathVariable BigDecimal couponAmount);
+
+    @PostMapping("/order/info/getPendingOrderInfos")
+    Result<List<OrderInfo>> getPendingOrderInfos(@RequestBody List<Long> orderIds);
+
 }

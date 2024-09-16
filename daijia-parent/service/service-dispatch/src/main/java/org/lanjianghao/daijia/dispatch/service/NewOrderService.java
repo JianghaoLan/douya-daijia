@@ -10,11 +10,11 @@ import java.util.List;
 
 public interface NewOrderService extends IService<OrderJob> {
 
-    Long addAndStartTask(NewOrderTaskVo newOrderTaskVo);
-
-    void executeTask(long jobId);
-
-    List<NewOrderDataVo> findNewOrderQueueData(Long driverId);
-
-    Boolean clearNewOrderQueueData(Long driverId);
+//    Long addAndStartTask(NewOrderTaskVo newOrderTaskVo);
+//
+//    void executeTask(long jobId);
+//
+//    List<NewOrderDataVo> findNewOrderQueueData(Long driverId);
+//
+//    Boolean clearNewOrderQueueData(Long driverId);
 }

@@ -110,3 +110,6 @@ docker run --name seata-server \
 -d seataio/seata-server:1.7.1
 ```
 
+### Xxl-Job
+
+目前项目已经不需要定时任务来实现订单搜索，无需启动Xxl-Job。

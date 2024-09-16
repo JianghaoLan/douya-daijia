@@ -23,22 +23,22 @@ public class NewOrderController {
     @Autowired
     private NewOrderService newOrderService;
 
-    @Operation(summary = "添加并开始新订单任务调度")
-    @PostMapping("/addAndStartTask")
-    public Result<Long> addAndStartTask(@RequestBody NewOrderTaskVo newOrderTaskVo) {
-        return Result.ok(newOrderService.addAndStartTask(newOrderTaskVo));
-    }
-
-    @Operation(summary = "查询司机新订单数据")
-    @GetMapping("/findNewOrderQueueData/{driverId}")
-    public Result<List<NewOrderDataVo>> findNewOrderQueueData(@PathVariable Long driverId) {
-        return Result.ok(newOrderService.findNewOrderQueueData(driverId));
-    }
-
-    @Operation(summary = "清空新订单队列数据")
-    @GetMapping("/clearNewOrderQueueData/{driverId}")
-    public Result<Boolean> clearNewOrderQueueData(@PathVariable Long driverId) {
-        return Result.ok(newOrderService.clearNewOrderQueueData(driverId));
-    }
+//    @Operation(summary = "添加并开始新订单任务调度")
+//    @PostMapping("/addAndStartTask")
+//    public Result<Long> addAndStartTask(@RequestBody NewOrderTaskVo newOrderTaskVo) {
+//        return Result.ok(newOrderService.addAndStartTask(newOrderTaskVo));
+//    }
+//
+//    @Operation(summary = "查询司机新订单数据")
+//    @GetMapping("/findNewOrderQueueData/{driverId}")
+//    public Result<List<NewOrderDataVo>> findNewOrderQueueData(@PathVariable Long driverId) {
+//        return Result.ok(newOrderService.findNewOrderQueueData(driverId));
+//    }
+//
+//    @Operation(summary = "清空新订单队列数据")
+//    @GetMapping("/clearNewOrderQueueData/{driverId}")
+//    public Result<Boolean> clearNewOrderQueueData(@PathVariable Long driverId) {
+//        return Result.ok(newOrderService.clearNewOrderQueueData(driverId));
+//    }
 }
 

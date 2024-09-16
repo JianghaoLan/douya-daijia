@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.lanjianghao.daijia.common.constant.RedisConstant;
+import org.lanjianghao.daijia.common.constant.SystemConstant;
 import org.lanjianghao.daijia.common.execption.BusinessException;
 import org.lanjianghao.daijia.common.result.ResultCodeEnum;
 import org.lanjianghao.daijia.model.entity.order.OrderBill;
@@ -20,6 +21,7 @@ import org.lanjianghao.daijia.order.mapper.OrderBillMapper;
 import org.lanjianghao.daijia.order.mapper.OrderInfoMapper;
 import org.lanjianghao.daijia.order.mapper.OrderProfitsharingMapper;
 import org.lanjianghao.daijia.order.mapper.OrderStatusLogMapper;
+import org.lanjianghao.daijia.order.redis.PendingOrderCache;
 import org.lanjianghao.daijia.order.service.OrderInfoService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.redisson.api.RBlockingQueue;
@@ -34,6 +36,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -55,6 +58,9 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
 
     @Autowired
     private OrderProfitsharingMapper orderProfitsharingMapper;
+
+    @Autowired
+    private PendingOrderCache pendingOrderCache;
 
     final private static Integer[] CustomerOrderActiveStatus = {
             OrderStatus.WAITING_ACCEPT.getStatus(),     //TODO 是否包含这个状态
@@ -82,6 +88,7 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         orderInfo.setOrderNo(UUID.randomUUID().toString().replace("-", ""));
         orderInfo.setStatus(OrderStatus.WAITING_ACCEPT.getStatus());
         this.save(orderInfo);
+        pendingOrderCache.set(orderInfo);
 
         //发送延迟消息，时间到后自动取消订单
         this.sendDelayMessage(orderInfo.getId());
@@ -100,12 +107,17 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         return orderInfo.getId();
     }
 
+    @Override
+    public List<OrderInfo> getPendingOrderInfos(List<Long> orderIds) {
+        return pendingOrderCache.getAll(orderIds);
+    }
+
     private void sendDelayMessage(Long orderId) {
         try {
             RBlockingQueue<Object> blockingQueue = redissonClient.getBlockingQueue("queue_cancel_order");
             RDelayedQueue<Object> delayedQueue = redissonClient.getDelayedQueue(blockingQueue);
 
-            delayedQueue.offer(orderId.toString(), 15, TimeUnit.MINUTES);
+            delayedQueue.offer(orderId.toString(), SystemConstant.ORDER_EXPIRES_TIME, TimeUnit.MINUTES);
         } catch (Exception e) {
             e.printStackTrace();
             throw new BusinessException(ResultCodeEnum.DATA_ERROR);
@@ -159,6 +171,9 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
                 if (!updateOrderSuccess) {
                     throw new BusinessException(ResultCodeEnum.COB_NEW_ORDER_FAIL);
                 }
+
+                //删除订单信息redis缓存
+                pendingOrderCache.remove(orderId);
 
                 return true;
             }
@@ -404,13 +419,28 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         return vo;
     }
 
-    @Override
-    public void cancelOrder(long orderId) {
+    private boolean cancelOrderInDb(long orderId) {
         LambdaQueryWrapper<OrderInfo> query = new LambdaQueryWrapper<>();
-        query.eq(OrderInfo::getId, orderId).eq(OrderInfo::getStatus, OrderStatus.WAITING_ACCEPT.getStatus());
+        query.eq(OrderInfo::getId, orderId)
+                .eq(OrderInfo::getStatus, OrderStatus.WAITING_ACCEPT.getStatus());
         OrderInfo forUpdate = new OrderInfo();
         forUpdate.setStatus(OrderStatus.CANCEL_ORDER.getStatus());
-        boolean success = this.update(forUpdate, query);
+        return this.update(forUpdate, query);
+    }
+
+    private boolean cancelOrderInDb(long orderId, long customerId) {
+        LambdaQueryWrapper<OrderInfo> query = new LambdaQueryWrapper<>();
+        query.eq(OrderInfo::getId, orderId)
+                .eq(OrderInfo::getStatus, OrderStatus.WAITING_ACCEPT.getStatus())
+                .eq(OrderInfo::getCustomerId, customerId);
+        OrderInfo forUpdate = new OrderInfo();
+        forUpdate.setStatus(OrderStatus.CANCEL_ORDER.getStatus());
+        return this.update(forUpdate, query);
+    }
+
+    @Override
+    public void cancelOrder(long orderId) {
+        boolean success = cancelOrderInDb(orderId);
 
         if (!success) {
             throw new BusinessException(ResultCodeEnum.ILLEGAL_REQUEST);
@@ -419,6 +449,25 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         //删除接单标识
         String orderRedisKey = RedisConstant.ORDER_ACCEPT_MARK + orderId;
         redisTemplate.delete(orderRedisKey);
+
+        //删除待接单订单信息缓存
+        pendingOrderCache.remove(orderId);
+    }
+
+    @Override
+    public void cancelOrder(Long orderId, Long customerId) {
+        boolean success = cancelOrderInDb(orderId, customerId);
+
+        if (!success) {
+            throw new BusinessException(ResultCodeEnum.ILLEGAL_REQUEST);
+        }
+
+        //删除接单标识
+        String orderRedisKey = RedisConstant.ORDER_ACCEPT_MARK + orderId;
+        redisTemplate.delete(orderRedisKey);
+
+        //删除待接单订单信息缓存
+        pendingOrderCache.remove(orderId);
     }
 
     @Override
@@ -426,4 +475,5 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         int rows = orderBillMapper.updateCouponAmount(orderId, couponAmount);
         return rows > 0;
     }
+
 }

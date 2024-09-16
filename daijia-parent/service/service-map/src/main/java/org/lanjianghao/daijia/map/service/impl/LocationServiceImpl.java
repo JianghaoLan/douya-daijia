@@ -4,8 +4,13 @@ import com.alibaba.fastjson.JSON;
 import org.bson.types.ObjectId;
 import org.lanjianghao.daijia.common.constant.RedisConstant;
 import org.lanjianghao.daijia.common.constant.SystemConstant;
+import org.lanjianghao.daijia.common.execption.BusinessException;
+import org.lanjianghao.daijia.common.result.ResultCodeEnum;
 import org.lanjianghao.daijia.common.util.LocationUtil;
 import org.lanjianghao.daijia.driver.client.DriverInfoFeignClient;
+import org.lanjianghao.daijia.map.redis.DriverLocationCache;
+import org.lanjianghao.daijia.map.redis.OrderDriverSet;
+import org.lanjianghao.daijia.map.redis.OrderLocationInfoCache;
 import org.lanjianghao.daijia.map.repository.OrderServiceLocationRepository;
 import org.lanjianghao.daijia.map.service.LocationService;
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +20,10 @@ import org.lanjianghao.daijia.model.form.map.OrderServiceLocationForm;
 import org.lanjianghao.daijia.model.form.map.SearchNearByDriverForm;
 import org.lanjianghao.daijia.model.form.map.UpdateDriverLocationForm;
 import org.lanjianghao.daijia.model.form.map.UpdateOrderLocationForm;
-import org.lanjianghao.daijia.model.vo.map.NearByDriverVo;
-import org.lanjianghao.daijia.model.vo.map.OrderLocationVo;
-import org.lanjianghao.daijia.model.vo.map.OrderServiceLastLocationVo;
+import org.lanjianghao.daijia.model.vo.map.*;
 import org.lanjianghao.daijia.order.client.OrderInfoFeignClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.geo.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -62,75 +64,91 @@ public class LocationServiceImpl implements LocationService {
     @Autowired
     private OrderInfoFeignClient orderInfoFeignClient;
 
+    @Autowired
+    private OrderLocationInfoCache orderLocationInfoCache;
+
+    @Autowired
+    private DriverLocationCache driverLocationCache;
+
+    @Autowired
+    private OrderDriverSet orderDriverSet;
+
     @Override
-    public boolean updateDriverLocation(UpdateDriverLocationForm updateDriverLocationForm) {
-        double longitude = updateDriverLocationForm.getLongitude().doubleValue();
-        double latitude = updateDriverLocationForm.getLatitude().doubleValue();
-        Long driverId = updateDriverLocationForm.getDriverId();
-        redisTemplate.opsForGeo().add(RedisConstant.DRIVER_GEO_LOCATION,
-                new Point(longitude, latitude), driverId.toString());
+    public boolean updateDriverLocation(UpdateDriverLocationForm form) {
+//        double longitude = updateDriverLocationForm.getLongitude().doubleValue();
+//        double latitude = updateDriverLocationForm.getLatitude().doubleValue();
+//        Long driverId = updateDriverLocationForm.getDriverId();
+//        redisTemplate.opsForGeo().add(RedisConstant.DRIVER_GEO_LOCATION,
+//                new Point(longitude, latitude), driverId.toString());
+
+        driverLocationCache.add(form.getDriverId(), new LocationVo(form.getLongitude(), form.getLatitude()));
+
         return true;
     }
 
     @Override
     public boolean removeDriverLocation(Long driverId) {
-        redisTemplate.opsForGeo().remove(RedisConstant.DRIVER_GEO_LOCATION, driverId.toString());
+//        redisTemplate.opsForGeo().remove(RedisConstant.DRIVER_GEO_LOCATION, driverId.toString());
+
+        driverLocationCache.remove(driverId);
+
         return true;
     }
 
-    @Override
-    public List<NearByDriverVo> searchNearByDriver(SearchNearByDriverForm form) {
-        double longitude = form.getLongitude().doubleValue();
-        double latitude = form.getLatitude().doubleValue();
-        RedisGeoCommands.GeoRadiusCommandArgs args =
-                RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs()
-                        .includeDistance()
-                        .includeCoordinates()
-                        .sortAscending();
-        GeoResults<RedisGeoCommands.GeoLocation<String>> geoRes = redisTemplate.opsForGeo().search(
-                RedisConstant.DRIVER_GEO_LOCATION,
-                GeoReference.fromCoordinate(longitude, latitude),
-                new Distance(SystemConstant.NEARBY_DRIVER_RADIUS, Metrics.KILOMETERS),
-                args);
-
-        if (geoRes == null || CollectionUtils.isEmpty(geoRes.getContent())) {
-            return Collections.emptyList();
-        }
-        List<NearByDriverVo> res = geoRes.getContent().stream().map(item -> {
-            NearByDriverVo vo = new NearByDriverVo();
-            vo.setDriverId(Long.parseLong(item.getContent().getName()));
-            BigDecimal distance = BigDecimal.valueOf(item.getDistance().getNormalizedValue())
-                    .multiply(BigDecimal.valueOf(Metrics.KILOMETERS.getMultiplier()))
-                    .setScale(2, RoundingMode.HALF_UP);
-            vo.setDistance(distance);
-            return vo;
-        }).collect(Collectors.toList());
-
-        //查询所有附近司机的设置
-        List<Long> driverIds = res.stream().map(NearByDriverVo::getDriverId).toList();
-        List<DriverSet> driverSets = driverInfoFeignClient.getBatchDriverSet(driverIds).getData();
-        Map<Long, DriverSet> driverSetMap = driverSets.stream().collect(Collectors.toMap(DriverSet::getDriverId, s -> s));
-
-        BigDecimal mileageDis = form.getMileageDistance();
-        res = res.stream().filter(vo -> {
-            DriverSet driverSet = driverSetMap.get(vo.getDriverId());
-            //判断司机是否处于接单状态
-            if (driverSet == null || driverSet.getServiceStatus() != 1) {
-                return false;
-            }
-            //判断订单路线距离是否大于设置值
-            BigDecimal orderDistance = driverSet.getOrderDistance();
-            if (orderDistance.compareTo(BigDecimal.ZERO) > 0 && orderDistance.compareTo(mileageDis) < 0) {
-                return false;
-            };
-            //判断离用户距离是否大于设置值
-            BigDecimal acceptDistance = driverSet.getAcceptDistance();
-            BigDecimal currentDistance = vo.getDistance();
-            return acceptDistance.compareTo(BigDecimal.ZERO) <= 0 || acceptDistance.compareTo(currentDistance) >= 0;
-        }).toList();
-
-        return res;
-    }
+//    过时
+//    @Override
+//    public List<NearByDriverVo> searchNearByDriver(SearchNearByDriverForm form) {
+//        double longitude = form.getLongitude().doubleValue();
+//        double latitude = form.getLatitude().doubleValue();
+//        RedisGeoCommands.GeoRadiusCommandArgs args =
+//                RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs()
+//                        .includeDistance()
+//                        .includeCoordinates()
+//                        .sortAscending();
+//        GeoResults<RedisGeoCommands.GeoLocation<String>> geoRes = redisTemplate.opsForGeo().search(
+//                RedisConstant.DRIVER_GEO_LOCATION,
+//                GeoReference.fromCoordinate(longitude, latitude),
+//                new Distance(SystemConstant.NEARBY_DRIVER_RADIUS, Metrics.KILOMETERS),
+//                args);
+//
+//        if (geoRes == null || CollectionUtils.isEmpty(geoRes.getContent())) {
+//            return Collections.emptyList();
+//        }
+//        List<NearByDriverVo> res = geoRes.getContent().stream().map(item -> {
+//            NearByDriverVo vo = new NearByDriverVo();
+//            vo.setDriverId(Long.parseLong(item.getContent().getName()));
+//            BigDecimal distance = BigDecimal.valueOf(item.getDistance().getNormalizedValue())
+//                    .multiply(BigDecimal.valueOf(Metrics.KILOMETERS.getMultiplier()))
+//                    .setScale(2, RoundingMode.HALF_UP);
+//            vo.setDistance(distance);
+//            return vo;
+//        }).collect(Collectors.toList());
+//
+//        //查询所有附近司机的设置
+//        List<Long> driverIds = res.stream().map(NearByDriverVo::getDriverId).toList();
+//        List<DriverSet> driverSets = driverInfoFeignClient.getBatchDriverSet(driverIds).getData();
+//        Map<Long, DriverSet> driverSetMap = driverSets.stream().collect(Collectors.toMap(DriverSet::getDriverId, s -> s));
+//
+//        BigDecimal mileageDis = form.getMileageDistance();
+//        res = res.stream().filter(vo -> {
+//            DriverSet driverSet = driverSetMap.get(vo.getDriverId());
+//            //判断司机是否处于接单状态
+//            if (driverSet == null || driverSet.getServiceStatus() != 1) {
+//                return false;
+//            }
+//            //判断订单路线距离是否大于设置值
+//            BigDecimal orderDistance = driverSet.getOrderDistance();
+//            if (orderDistance.compareTo(BigDecimal.ZERO) > 0 && orderDistance.compareTo(mileageDis) < 0) {
+//                return false;
+//            };
+//            //判断离用户距离是否大于设置值
+//            BigDecimal acceptDistance = driverSet.getAcceptDistance();
+//            BigDecimal currentDistance = vo.getDistance();
+//            return acceptDistance.compareTo(BigDecimal.ZERO) <= 0 || acceptDistance.compareTo(currentDistance) >= 0;
+//        }).toList();
+//
+//        return res;
+//    }
 
     @Override
     public Boolean updateOrderLocationToCache(UpdateOrderLocationForm updateOrderLocationForm) {
@@ -210,5 +228,55 @@ public class LocationServiceImpl implements LocationService {
         }
 
         return totalDistance;
+    }
+//
+//    @Override
+//    public Boolean addOrderStartLocation(OrderStartLocationVo vo) {
+//        orderCache.add(vo.getOrderId(), vo.getLongitude(), vo.getLatitude());
+//        return true;
+//    }
+//
+//    @Override
+//    public Boolean removeOrderStartLocation(Long orderId) {
+//        orderCache.remove(orderId);
+//        return true;
+//    }
+
+    @Override
+    public List<AvailableOrderVo> searchNewAvailableOrder(Long driverId) {
+        DriverSet driverSet = driverInfoFeignClient.getDriverSet(driverId).getData();
+        if (driverSet == null || driverSet.getServiceStatus() != 1) {
+            throw new BusinessException(ResultCodeEnum.NO_START_SERVICE);
+        }
+
+        LocationVo driverLoc = driverLocationCache.get(driverId);
+        if (driverLoc == null) {        //解决司机端点击【开始接单】后立即报错。（因为此刻还没有司机位置信息，等几秒才有）
+            return Collections.emptyList();
+        }
+
+        //订单离用户距离阈值
+        BigDecimal acceptDistance = driverSet.getAcceptDistance();
+        BigDecimal orderDistance = driverSet.getOrderDistance();
+
+        List<AvailableOrderVo> availableOrderVos = orderLocationInfoCache.searchAvailableOrders(
+                driverLoc.getLongitude(), driverLoc.getLatitude(), acceptDistance, orderDistance);
+        availableOrderVos = availableOrderVos.stream()
+                .filter(vo -> !orderDriverSet.hasDriver(vo.getOrderId(), driverId))     //判断该订单是否已经给该司机推送过
+                .peek(vo -> orderDriverSet.addDriver(vo.getOrderId(), driverId))        //标记给该司机推送过
+                .toList();
+        return availableOrderVos;
+    }
+
+    @Override
+    public Boolean setOrderLocationInfo(OrderLocationInfoVo locationInfo) {
+        orderLocationInfoCache.set(locationInfo);
+        return true;
+    }
+
+    @Override
+    public Boolean removeOrderRelatedInfo(Long orderId) {
+        orderLocationInfoCache.remove(orderId);
+        orderDriverSet.removeSet(orderId);
+        return true;
     }
 }

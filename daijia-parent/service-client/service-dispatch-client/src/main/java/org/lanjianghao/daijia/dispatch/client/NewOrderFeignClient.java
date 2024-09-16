@@ -15,12 +15,12 @@ import java.util.List;
 @FeignClient(value = "service-dispatch")
 public interface NewOrderFeignClient {
 
-    @PostMapping("/dispatch/newOrder/addAndStartTask")
-    Result<Long> addAndStartTask(@RequestBody NewOrderTaskVo newOrderTaskVo);
+//    @PostMapping("/dispatch/newOrder/addAndStartTask")
+//    Result<Long> addAndStartTask(@RequestBody NewOrderTaskVo newOrderTaskVo);
 
-    @GetMapping("/dispatch/newOrder/findNewOrderQueueData/{driverId}")
-    Result<List<NewOrderDataVo>> findNewOrderQueueData(@PathVariable Long driverId);
-
-    @GetMapping("/dispatch/newOrder/clearNewOrderQueueData/{driverId}")
-    Result<Boolean> clearNewOrderQueueData(@PathVariable Long driverId);
+//    @GetMapping("/dispatch/newOrder/findNewOrderQueueData/{driverId}")
+//    Result<List<NewOrderDataVo>> findNewOrderQueueData(@PathVariable Long driverId);
+//
+//    @GetMapping("/dispatch/newOrder/clearNewOrderQueueData/{driverId}")
+//    Result<Boolean> clearNewOrderQueueData(@PathVariable Long driverId);
 }

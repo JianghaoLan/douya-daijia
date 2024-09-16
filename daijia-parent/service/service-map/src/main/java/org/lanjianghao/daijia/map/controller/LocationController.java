@@ -6,12 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.lanjianghao.daijia.common.result.Result;
 import org.lanjianghao.daijia.map.service.LocationService;
 import org.lanjianghao.daijia.model.form.map.OrderServiceLocationForm;
-import org.lanjianghao.daijia.model.form.map.SearchNearByDriverForm;
 import org.lanjianghao.daijia.model.form.map.UpdateDriverLocationForm;
 import org.lanjianghao.daijia.model.form.map.UpdateOrderLocationForm;
-import org.lanjianghao.daijia.model.vo.map.NearByDriverVo;
-import org.lanjianghao.daijia.model.vo.map.OrderLocationVo;
-import org.lanjianghao.daijia.model.vo.map.OrderServiceLastLocationVo;
+import org.lanjianghao.daijia.model.vo.map.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,10 +37,22 @@ public class LocationController {
         return Result.ok(locationService.removeDriverLocation(driverId));
     }
 
-    @Operation(summary = "搜索附近满足条件的司机")
-    @PostMapping("/searchNearByDriver")
-    public Result<List<NearByDriverVo>> searchNearByDriver(@RequestBody SearchNearByDriverForm searchNearByDriverForm) {
-        return Result.ok(locationService.searchNearByDriver(searchNearByDriverForm));
+    @Operation(summary = "设置订单位置信息")
+    @PostMapping("/setOrderLocationInfo")
+    public Result<Boolean> setOrderLocationInfo(@RequestBody OrderLocationInfoVo locationInfo) {
+        return Result.ok(locationService.setOrderLocationInfo(locationInfo));
+    }
+
+    @Operation(summary = "删除订单所有相关信息")
+    @DeleteMapping("/removeOrderRelatedInfo/{orderId}")
+    public Result<Boolean> removeOrderRelatedInfo(@PathVariable Long orderId) {
+        return Result.ok(locationService.removeOrderRelatedInfo(orderId));
+    }
+
+    @Operation(summary = "查找新的可服务订单，不会得到同一司机之前获取过的订单")
+    @GetMapping("/searchNewAvailableOrder/{driverId}")
+    public Result<List<AvailableOrderVo>> searchNewAvailableOrder(@PathVariable Long driverId) {
+        return Result.ok(locationService.searchNewAvailableOrder(driverId));
     }
 
     @Operation(summary = "司机赶往代驾起始点：更新订单地址到缓存")

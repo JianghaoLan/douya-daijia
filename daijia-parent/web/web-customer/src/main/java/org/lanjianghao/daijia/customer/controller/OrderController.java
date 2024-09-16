@@ -61,6 +61,14 @@ public class OrderController {
         return Result.ok(orderService.submitOrder(submitOrderForm));
     }
 
+    @Operation(summary = "顾客取消订单")
+    @LoginRequired
+    @GetMapping("/customerCancelNoAcceptOrder/{orderId}")
+    public Result<Boolean> cancelOrder(@PathVariable Long orderId) {
+        Long customerId = AuthContextHolder.getUserId();
+        return Result.ok(orderService.cancelOrder(orderId, customerId));
+    }
+
     @Operation(summary = "查询订单状态")
     @LoginRequired
     @GetMapping("/getOrderStatus/{orderId}")

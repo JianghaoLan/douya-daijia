@@ -112,22 +112,22 @@ public class DriverServiceImpl implements DriverService {
         //清除代驾位置信息
         locationFeignClient.removeDriverLocation(driverId);
 
-        //清空代驾订单队列信息
-        newOrderFeignClient.clearNewOrderQueueData(driverId);
+//        //清空代驾订单队列信息
+//        newOrderFeignClient.clearNewOrderQueueData(driverId);
 
         return true;
     }
 
     @Override
     public Boolean stopService(Long driverId) {
-        //更新订单状态为未结单
+        //更新司机状态为未结单
         client.updateServiceStatus(driverId, 0);
 
         //清除代驾位置信息
         locationFeignClient.removeDriverLocation(driverId);
 
-        //清空代驾订单队列信息
-        newOrderFeignClient.clearNewOrderQueueData(driverId);
+//        //清空代驾订单队列信息
+//        newOrderFeignClient.clearNewOrderQueueData(driverId);
 
         return true;
     }

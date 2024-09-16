@@ -24,6 +24,7 @@ import org.lanjianghao.daijia.model.form.rules.FeeRuleRequestForm;
 import org.lanjianghao.daijia.model.form.rules.ProfitsharingRuleRequestForm;
 import org.lanjianghao.daijia.model.form.rules.RewardRuleRequestForm;
 import org.lanjianghao.daijia.model.vo.base.PageVo;
+import org.lanjianghao.daijia.model.vo.map.AvailableOrderVo;
 import org.lanjianghao.daijia.model.vo.map.DrivingLineVo;
 import org.lanjianghao.daijia.model.vo.map.OrderLocationVo;
 import org.lanjianghao.daijia.model.vo.map.OrderServiceLastLocationVo;
@@ -38,12 +39,16 @@ import org.lanjianghao.daijia.rules.client.RewardRuleFeignClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -53,8 +58,8 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private OrderInfoFeignClient orderInfoFeignClient;
 
-    @Autowired
-    private NewOrderFeignClient newOrderFeignClient;
+//    @Autowired
+//    private NewOrderFeignClient newOrderFeignClient;
 
     @Autowired
     private MapFeignClient mapFeignClient;
@@ -78,12 +83,33 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<NewOrderDataVo> findNewOrderQueueData(Long driverId) {
-        return newOrderFeignClient.findNewOrderQueueData(driverId).getData();
+        List<AvailableOrderVo> availableOrders = locationFeignClient.searchNewAvailableOrder(driverId).getData();
+        if (CollectionUtils.isEmpty(availableOrders)) {
+            return Collections.emptyList();
+        }
+        List<Long> orderIds = availableOrders.stream().map(AvailableOrderVo::getOrderId).toList();
+        List<OrderInfo> orderInfos = orderInfoFeignClient.getPendingOrderInfos(orderIds).getData();
+        Map<Long, OrderInfo> orderInfoMap = orderInfos.stream().collect(Collectors.toMap(OrderInfo::getId, v -> v));
+
+        return availableOrders.stream()
+                .filter(item -> orderInfoMap.containsKey(item.getOrderId()))
+                .map(item -> {
+                    OrderInfo orderInfo = orderInfoMap.get(item.getOrderId());
+                    NewOrderDataVo newOrderDataVo = new NewOrderDataVo();
+                    BeanUtils.copyProperties(orderInfo, newOrderDataVo);
+                    newOrderDataVo.setDistance(item.getDistance());
+                    newOrderDataVo.setOrderId(orderInfo.getId());
+                    return newOrderDataVo;
+                }).toList();
     }
 
     @Override
     public Boolean robNewOrder(Long driverId, Long orderId) {
-        return orderInfoFeignClient.robNewOrder(driverId, orderId).getData();
+        Boolean res = orderInfoFeignClient.robNewOrder(driverId, orderId).getData();
+        if (res) {
+            locationFeignClient.removeOrderRelatedInfo(orderId);
+        }
+        return res;
     }
 
     @Override

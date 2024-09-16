@@ -1,6 +1,7 @@
 package org.lanjianghao.daijia.order.handler;
 
 import jakarta.annotation.PostConstruct;
+import org.lanjianghao.daijia.map.client.LocationFeignClient;
 import org.lanjianghao.daijia.order.service.OrderInfoService;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RedissonClient;
@@ -18,6 +19,9 @@ public class RedisDelayHandler {
     @Autowired
     private OrderInfoService orderInfoService;
 
+    @Autowired
+    private LocationFeignClient locationFeignClient;
+
     @PostConstruct
     public void listener() {
         new Thread(() -> {
@@ -27,6 +31,7 @@ public class RedisDelayHandler {
                 try {
                     String orderId = blockingQueue.take();
                     if (StringUtils.hasText(orderId)) {
+                        locationFeignClient.removeOrderRelatedInfo(Long.parseLong(orderId));
                         orderInfoService.cancelOrder(Long.parseLong(orderId));
                     }
                 } catch (InterruptedException e) {

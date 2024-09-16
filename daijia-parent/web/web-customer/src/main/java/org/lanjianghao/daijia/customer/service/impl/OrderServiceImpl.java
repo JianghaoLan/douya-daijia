@@ -25,11 +25,8 @@ import org.lanjianghao.daijia.model.form.payment.PaymentInfoForm;
 import org.lanjianghao.daijia.model.form.rules.FeeRuleRequestForm;
 import org.lanjianghao.daijia.model.vo.base.PageVo;
 import org.lanjianghao.daijia.model.vo.customer.ExpectOrderVo;
-import org.lanjianghao.daijia.model.vo.dispatch.NewOrderTaskVo;
 import org.lanjianghao.daijia.model.vo.driver.DriverInfoVo;
-import org.lanjianghao.daijia.model.vo.map.DrivingLineVo;
-import org.lanjianghao.daijia.model.vo.map.OrderLocationVo;
-import org.lanjianghao.daijia.model.vo.map.OrderServiceLastLocationVo;
+import org.lanjianghao.daijia.model.vo.map.*;
 import org.lanjianghao.daijia.model.vo.order.*;
 import org.lanjianghao.daijia.model.vo.payment.WxPrepayVo;
 import org.lanjianghao.daijia.model.vo.rules.FeeRuleResponseVo;
@@ -38,7 +35,6 @@ import org.lanjianghao.daijia.rules.client.FeeRuleFeignClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -117,20 +113,32 @@ public class OrderServiceImpl implements OrderService {
         Result<Long> res = orderInfoFeignClient.saveOrderInfo(orderInfoForm);
         Long orderId = res.getData();
 
-        //远程调用定时查询附近可以接单的司机
-        NewOrderTaskVo newOrderTaskVo = new NewOrderTaskVo();
-        newOrderTaskVo.setOrderId(orderId);
-        newOrderTaskVo.setStartLocation(orderInfoForm.getStartLocation());
-        newOrderTaskVo.setStartPointLongitude(orderInfoForm.getStartPointLongitude());
-        newOrderTaskVo.setStartPointLatitude(orderInfoForm.getStartPointLatitude());
-        newOrderTaskVo.setEndLocation(orderInfoForm.getEndLocation());
-        newOrderTaskVo.setEndPointLongitude(orderInfoForm.getEndPointLongitude());
-        newOrderTaskVo.setEndPointLatitude(orderInfoForm.getEndPointLatitude());
-        newOrderTaskVo.setExpectAmount(orderInfoForm.getExpectAmount());
-        newOrderTaskVo.setExpectDistance(orderInfoForm.getExpectDistance());
-        newOrderTaskVo.setExpectTime(drivingLineVo.getDuration());
-        newOrderTaskVo.setFavourFee(orderInfoForm.getFavourFee());
-        Long jobId = newOrderFeignClient.addAndStartTask(newOrderTaskVo).getData();
+        //上传订单开始位置
+//        OrderStartLocationVo orderStartLocationVo = new OrderStartLocationVo();
+//        orderStartLocationVo.setOrderId(orderId);
+//        orderStartLocationVo.setLatitude(orderInfoForm.getStartPointLongitude());
+//        orderStartLocationVo.setLongitude(orderInfoForm.getStartPointLongitude());
+
+        OrderLocationInfoVo locationInfo = new OrderLocationInfoVo();
+        BeanUtils.copyProperties(submitOrderForm, locationInfo);
+        locationInfo.setExpectDistance(drivingLineVo.getDistance());
+        locationInfo.setOrderId(orderId);
+        locationFeignClient.setOrderLocationInfo(locationInfo);
+
+//        //远程调用定时查询附近可以接单的司机
+//        NewOrderTaskVo newOrderTaskVo = new NewOrderTaskVo();
+//        newOrderTaskVo.setOrderId(orderId);
+//        newOrderTaskVo.setStartLocation(orderInfoForm.getStartLocation());
+//        newOrderTaskVo.setStartPointLongitude(orderInfoForm.getStartPointLongitude());
+//        newOrderTaskVo.setStartPointLatitude(orderInfoForm.getStartPointLatitude());
+//        newOrderTaskVo.setEndLocation(orderInfoForm.getEndLocation());
+//        newOrderTaskVo.setEndPointLongitude(orderInfoForm.getEndPointLongitude());
+//        newOrderTaskVo.setEndPointLatitude(orderInfoForm.getEndPointLatitude());
+//        newOrderTaskVo.setExpectAmount(orderInfoForm.getExpectAmount());
+//        newOrderTaskVo.setExpectDistance(orderInfoForm.getExpectDistance());
+//        newOrderTaskVo.setExpectTime(drivingLineVo.getDuration());
+//        newOrderTaskVo.setFavourFee(orderInfoForm.getFavourFee());
+//        Long jobId = newOrderFeignClient.addAndStartTask(newOrderTaskVo).getData();
 
         return orderId;
     }
@@ -257,5 +265,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Boolean queryPayStatus(String orderNo) {
         return wxPayFeignClient.queryPayStatus(orderNo).getData();
+    }
+
+    @Override
+    public Boolean cancelOrder(Long orderId, Long customerId) {
+        Boolean success = orderInfoFeignClient.cancelOrder(orderId, customerId).getData();
+        if (!success) {
+            throw new BusinessException(ResultCodeEnum.DATA_ERROR);
+        }
+        locationFeignClient.removeOrderRelatedInfo(orderId);
+        return true;
     }
 }

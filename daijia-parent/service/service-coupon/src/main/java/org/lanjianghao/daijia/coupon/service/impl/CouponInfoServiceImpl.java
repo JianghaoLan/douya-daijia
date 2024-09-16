@@ -140,6 +140,7 @@ public class CouponInfoServiceImpl extends ServiceImpl<CouponInfoMapper, CouponI
 
         //按减免金额排序
         vos.sort(Comparator.comparing(AvailableCouponVo::getReduceAmount));
+        Collections.reverse(vos);
 
         return vos;
     }
